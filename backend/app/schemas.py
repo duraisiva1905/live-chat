@@ -10,10 +10,11 @@ from pydantic import BaseModel, Field, field_validator
 
 class CreateRoomPayload(BaseModel):
     room_name: str = Field(..., min_length=1, max_length=100)
+    created_by: str = Field(..., min_length=1, max_length=50)
 
-    @field_validator("room_name", mode="before")
+    @field_validator("room_name", "created_by", mode="before")
     @classmethod
-    def normalize_room_name(cls, value: object) -> object:
+    def normalize_text(cls, value: object) -> object:
         if isinstance(value, str):
             return value.strip()
         return value
@@ -69,6 +70,7 @@ class RoomSummaryOut(BaseModel):
     room_id: int
     room_name: str
     created_at: datetime
+    created_by: str
     active_users: int
 
 
@@ -79,6 +81,7 @@ class RoomUsersOut(BaseModel):
 
 class MessageHistoryOut(BaseModel):
     room: str
+    created_by: str | None = None
     messages: list[MessageOut]
 
 

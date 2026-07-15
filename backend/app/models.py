@@ -27,6 +27,7 @@ class Room(Base):
         nullable=False,
         index=True,
     )
+    created_by: Mapped[str] = mapped_column(String(50), nullable=False, default="unknown")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

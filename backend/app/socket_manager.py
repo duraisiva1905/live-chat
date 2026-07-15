@@ -94,7 +94,11 @@ async def create_room(sid: str, data: dict[str, Any]) -> None:
 
     try:
         async with async_session_factory() as session:
-            room = await room_manager.create_room(session, payload.room_name)
+            room = await room_manager.create_room(
+                session,
+                payload.room_name,
+                payload.created_by,
+            )
     except RoomError as exc:
         await _emit_error(sid, exc.message, code=exc.code)
         return
@@ -137,6 +141,7 @@ async def join_room(sid: str, data: dict[str, Any]) -> None:
         "message_history",
         {
             "room": result.room_name,
+            "created_by": result.created_by,
             "messages": [msg.model_dump(mode="json") for msg in result.history],
         },
         to=sid,

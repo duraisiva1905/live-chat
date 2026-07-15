@@ -77,7 +77,7 @@ def main() -> int:
         str(a_errors),
     )
 
-    a.emit("create_room", {"room_name": "alpha-e2e"})
+    a.emit("create_room", {"room_name": "alpha-e2e", "created_by": "alice"})
     time.sleep(0.5)
     ok("room created", any(r.get("room_name") == "alpha-e2e" for r in created), str(created))
 

@@ -53,54 +53,151 @@ live-chat/
 └── docker-compose.yml
 ```
 
-## Quick start (local)
+## How to run the application
+
+You need **two processes**: the FastAPI backend (port **8000**) and the Next.js frontend (port **3000**). Start the backend first.
 
 ### Prerequisites
 
-- Python 3.12+
-- Node.js 20+
-- npm
+| Tool | Version | Check command |
+|------|---------|---------------|
+| Python | 3.12+ | `python --version` |
+| Node.js | 20+ | `node --version` |
+| npm | 9+ | `npm --version` |
 
-### Backend
+Optional for Docker: [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Compose.
+
+---
+
+### Option A — Run locally (recommended for development)
+
+#### Step 1: Clone / open the project
 
 ```bash
+cd live-chat
+```
+
+#### Step 2: Start the backend
+
+Open a terminal in the project root.
+
+**Windows (PowerShell):**
+
+```powershell
 cd backend
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env   # optional; defaults work without it
+Copy-Item .env.example .env   # optional; defaults work without it
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
-
-### Frontend
+**macOS / Linux:**
 
 ```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # optional; defaults work without it
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+You should see something like:
+
+```text
+Uvicorn running on http://0.0.0.0:8000
+Application startup complete.
+```
+
+**Verify the backend:**
+
+- Browser or curl: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- Expected JSON: `{ "status": "ok", "database": "ok" }`
+- Rooms list: [http://127.0.0.1:8000/rooms](http://127.0.0.1:8000/rooms)
+
+Leave this terminal running.
+
+#### Step 3: Start the frontend
+
+Open a **second** terminal in the project root.
+
+**Windows (PowerShell):**
+
+```powershell
 cd frontend
-copy .env.local.example .env.local
+Copy-Item .env.local.example .env.local
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Create or select a room, enter a username, then chat. Use two browser windows to verify multi-user messaging.
+**macOS / Linux:**
 
-## Docker Compose
+```bash
+cd frontend
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+Confirm `.env.local` contains:
+
+```env
+NEXT_PUBLIC_SOCKET_URL=http://localhost:8000
+```
+
+You should see Next.js ready on port 3000.
+
+**Open the app:** [http://localhost:3000](http://localhost:3000)
+
+#### Step 4: Use the chat
+
+1. On the landing page, either select an **active room** from the list or click **Create a new room**.
+2. Enter a room name and create it (if needed).
+3. Switch back to **Join**, enter a **username** and room name, then click **Join room**.
+4. Send messages, check the online users sidebar, and leave via **Leave** (confirmation dialog).
+5. Open a **second browser window/tab** (or another browser) with a different username in the same room to verify live messaging.
+
+#### Step 5: Stop the app
+
+- Frontend: `Ctrl+C` in the frontend terminal
+- Backend: `Ctrl+C` in the backend terminal
+- Deactivate the Python venv (optional): `deactivate`
+
+---
+
+### Option B — Run with Docker Compose
+
+From the project root (`live-chat/`):
 
 ```bash
 docker compose up --build
 ```
 
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend: [http://localhost:8000/health](http://localhost:8000/health)
+| Service | URL |
+|---------|-----|
+| Frontend | [http://localhost:3000](http://localhost:3000) |
+| Backend health | [http://localhost:8000/health](http://localhost:8000/health) |
 
-SQLite data is stored in the `chat_data` Docker volume.
+SQLite data is stored in the Docker volume `chat_data`.
+
+To stop:
+
+```bash
+docker compose down
+```
+
+---
+
+### Troubleshooting
+
+| Issue | What to try |
+|-------|-------------|
+| Frontend cannot connect | Confirm backend is on port 8000 and `NEXT_PUBLIC_SOCKET_URL=http://localhost:8000` in `frontend/.env.local`. Restart `npm run dev` after changing env. |
+| Port 8000 already in use | Stop the other process using that port, or change the uvicorn `--port` and match `NEXT_PUBLIC_SOCKET_URL`. |
+| `ModuleNotFoundError` on backend | Activate `venv` and run `pip install -r requirements.txt` again. |
+| Blank / stale frontend | Delete `frontend/.next` and run `npm run dev` again. |
+| Join says room does not exist | Create the room first via **Create a new room**, then join. |
 
 ## Environment variables
 

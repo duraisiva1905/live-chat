@@ -27,6 +27,7 @@ class JoinResult:
     room_name: str
     room_id: int
     username: str
+    created_by: str
     users: list[UserOut]
     history: list[MessageOut]
     join_message: MessageOut
@@ -48,10 +49,18 @@ class RoomManager:
     def normalize_room_key(room_name: str) -> str:
         return room_name.strip().lower()
 
-    async def create_room(self, session: AsyncSession, room_name: str) -> RoomSummaryOut:
+    async def create_room(
+        self,
+        session: AsyncSession,
+        room_name: str,
+        created_by: str,
+    ) -> RoomSummaryOut:
         cleaned = room_name.strip()
+        creator = created_by.strip()
         if not cleaned:
             raise RoomError("Room name is required", code="validation_error")
+        if not creator:
+            raise RoomError("Creator username is required", code="validation_error")
 
         normalized = self.normalize_room_key(cleaned)
         existing = await session.scalar(
@@ -63,16 +72,15 @@ class RoomManager:
                 code="room_exists",
             )
 
-        room = Room(name=cleaned, name_normalized=normalized)
+        room = Room(
+            name=cleaned,
+            name_normalized=normalized,
+            created_by=creator,
+        )
         session.add(room)
         await session.commit()
         await session.refresh(room)
-        return RoomSummaryOut(
-            room_id=room.id,
-            room_name=room.name,
-            created_at=room.created_at,
-            active_users=0,
-        )
+        return self._to_room_summary(room, active_users=0)
 
     async def join(
         self,
@@ -85,7 +93,7 @@ class RoomManager:
         room = await self._get_room_by_name(session, room_name)
         if room is None:
             raise RoomError(
-                f"Room '{room_name}' does not exist. Create it first.",
+                f"Room '{room_name}' does not exist. Please create by clicking the 'Create Room' button.",
                 code="room_not_found",
             )
 
@@ -133,6 +141,7 @@ class RoomManager:
             room_name=room.name,
             room_id=room.id,
             username=username,
+            created_by=room.created_by,
             users=users,
             history=history,
             join_message=self._to_message_out(join_msg, room.name),
@@ -188,7 +197,8 @@ class RoomManager:
     ) -> MessageOut:
         user_session = await session.get(UserSession, sid)
         if user_session is None:
-            raise RoomError("You must join a room before sending messages", code="not_in_room")
+            raise RoomError(
+                "You must join a room before sending messages", code="not_in_room")
 
         room = await session.get(Room, user_session.room_id)
         if room is None:
@@ -206,15 +216,17 @@ class RoomManager:
         return self._to_message_out(message, room.name)
 
     async def list_active_rooms(self, session: AsyncSession) -> list[RoomSummaryOut]:
+        """List all rooms, including empty ones so they remain visible after users leave."""
         stmt = (
             select(
                 Room.id,
                 Room.name,
                 Room.created_at,
+                Room.created_by,
                 func.count(UserSession.sid).label("active_users"),
             )
-            .join(UserSession, UserSession.room_id == Room.id)
-            .group_by(Room.id, Room.name, Room.created_at)
+            .outerjoin(UserSession, UserSession.room_id == Room.id)
+            .group_by(Room.id, Room.name, Room.created_at, Room.created_by)
             .order_by(Room.name.asc())
         )
         rows = (await session.execute(stmt)).all()
@@ -223,6 +235,7 @@ class RoomManager:
                 room_id=row.id,
                 room_name=row.name,
                 created_at=row.created_at,
+                created_by=row.created_by or "unknown",
                 active_users=int(row.active_users),
             )
             for row in rows
@@ -281,6 +294,16 @@ class RoomManager:
         normalized = self.normalize_room_key(room_name)
         return await session.scalar(
             select(Room).where(Room.name_normalized == normalized)
+        )
+
+    @staticmethod
+    def _to_room_summary(room: Room, *, active_users: int) -> RoomSummaryOut:
+        return RoomSummaryOut(
+            room_id=room.id,
+            room_name=room.name,
+            created_at=room.created_at,
+            created_by=room.created_by or "unknown",
+            active_users=active_users,
         )
 
     @staticmethod

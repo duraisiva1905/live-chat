@@ -61,40 +61,47 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def _ensure_name_normalized_column(conn) -> None:
-    """Add name_normalized when upgrading an existing SQLite schema."""
+async def _ensure_sqlite_room_columns(conn) -> None:
+    """Add newer room columns when upgrading an existing SQLite schema."""
     if not settings.DATABASE_URL.startswith("sqlite"):
         return
 
     result = await conn.execute(text("PRAGMA table_info(rooms)"))
     columns = {row[1] for row in result.fetchall()}
-    if not columns or "name_normalized" in columns:
+    if not columns:
         return
 
-    await conn.execute(
-        text(
-            "ALTER TABLE rooms ADD COLUMN name_normalized VARCHAR(100)"
+    if "name_normalized" not in columns:
+        await conn.execute(
+            text("ALTER TABLE rooms ADD COLUMN name_normalized VARCHAR(100)")
         )
-    )
-    await conn.execute(
-        text(
-            "UPDATE rooms SET name_normalized = lower(name) "
-            "WHERE name_normalized IS NULL"
+        await conn.execute(
+            text(
+                "UPDATE rooms SET name_normalized = lower(name) "
+                "WHERE name_normalized IS NULL"
+            )
         )
-    )
-    await conn.execute(
-        text(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_rooms_name_normalized "
-            "ON rooms (name_normalized)"
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_rooms_name_normalized "
+                "ON rooms (name_normalized)"
+            )
         )
-    )
+
+    if "created_by" not in columns:
+        await conn.execute(
+            text(
+                "ALTER TABLE rooms ADD COLUMN created_by VARCHAR(50) "
+                "NOT NULL DEFAULT 'unknown'"
+            )
+        )
 
 
 async def init_db() -> None:
     """Create all tables if they do not exist and clear stale sessions."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await _ensure_name_normalized_column(conn)
+        await _ensure_sqlite_room_columns(conn)
         await conn.execute(text("SELECT 1"))
 
     async with async_session_factory() as session:
