@@ -11,6 +11,7 @@ import type { ConnectionStatus } from "@/types/chat";
 interface ChatHeaderProps {
   room: string;
   username: string;
+  createdBy?: string;
   status: ConnectionStatus;
   onLeave: () => void;
   onOpenRooms?: () => void;
@@ -20,6 +21,7 @@ interface ChatHeaderProps {
 export function ChatHeader({
   room,
   username,
+  createdBy,
   status,
   onLeave,
   onOpenRooms,
@@ -29,7 +31,7 @@ export function ChatHeader({
 
   return (
     <>
-      <header className="flex items-center gap-2 border-b border-border bg-card/50 px-3 py-2.5 backdrop-blur md:px-5">
+      <header className="sticky top-0 z-20 flex shrink-0 items-center gap-2 border-b border-border bg-card/80 px-3 py-2.5 backdrop-blur-md md:px-5">
         {onOpenRooms ? (
           <Button
             type="button"
@@ -50,6 +52,13 @@ export function ChatHeader({
               {room}
             </h1>
             <p className="truncate text-xs text-muted-foreground">
+              {createdBy ? (
+                <>
+                  Created by{" "}
+                  <span className="text-foreground/80">{createdBy}</span>
+                  <span className="mx-1.5 text-border">·</span>
+                </>
+              ) : null}
               Signed in as {username}
             </p>
           </div>

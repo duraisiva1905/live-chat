@@ -21,6 +21,7 @@ import type {
 interface UseChatResult {
   username: string;
   room: string;
+  roomCreatedBy: string;
   joined: boolean;
   messages: ChatMessage[];
   users: UserOut[];
@@ -36,7 +37,7 @@ interface UseChatResult {
   clearError: () => void;
   clearSuccess: () => void;
   connectLobby: () => void;
-  createRoom: (roomName: string) => void;
+  createRoom: (roomName: string, createdBy: string) => void;
   join: (username: string, room: string) => void;
   leave: () => void;
   sendMessage: (content: string) => void;
@@ -55,6 +56,7 @@ export function useChat(): UseChatResult {
   const { socket, status, connect, disconnect } = useSocket();
   const [username, setUsername] = useState("");
   const [room, setRoom] = useState("");
+  const [roomCreatedBy, setRoomCreatedBy] = useState("");
   const [joined, setJoined] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [users, setUsers] = useState<UserOut[]>([]);
@@ -67,7 +69,9 @@ export function useChat(): UseChatResult {
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const pendingJoin = useRef<{ username: string; room: string } | null>(null);
-  const pendingCreate = useRef<string | null>(null);
+  const pendingCreate = useRef<{ room_name: string; created_by: string } | null>(
+    null,
+  );
   const seenKeys = useRef<Set<string>>(new Set());
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTyping = useRef(false);
@@ -92,6 +96,7 @@ export function useChat(): UseChatResult {
     setJoined(false);
     setUsername("");
     setRoom("");
+    setRoomCreatedBy("");
     setMessages([]);
     setUsers([]);
     setTypingUsers([]);
@@ -134,6 +139,7 @@ export function useChat(): UseChatResult {
       setMessages(next);
       setJoined(true);
       setJoining(false);
+      setRoomCreatedBy(payload.created_by ?? "");
       if (pendingJoin.current) {
         setUsername(pendingJoin.current.username);
         setRoom(payload.room);
@@ -196,7 +202,10 @@ export function useChat(): UseChatResult {
       }
       const createPending = pendingCreate.current;
       if (createPending) {
-        socket.emit("create_room", { room_name: createPending });
+        socket.emit("create_room", {
+          room_name: createPending.room_name,
+          created_by: createPending.created_by,
+        });
       }
     };
 
@@ -228,18 +237,27 @@ export function useChat(): UseChatResult {
   }, [appendMessage, joined, socket]);
 
   const createRoom = useCallback(
-    (roomName: string) => {
+    (roomName: string, createdBy: string) => {
       const cleaned = roomName.trim();
+      const creator = createdBy.trim();
       if (!cleaned) {
         setError("Room name is required");
         setErrorCode("validation_error");
         return;
       }
+      if (!creator) {
+        setError("Your name is required to create a room");
+        setErrorCode("validation_error");
+        return;
+      }
       clearError();
       setCreating(true);
-      pendingCreate.current = cleaned;
+      pendingCreate.current = { room_name: cleaned, created_by: creator };
       if (socket.connected) {
-        socket.emit("create_room", { room_name: cleaned });
+        socket.emit("create_room", {
+          room_name: cleaned,
+          created_by: creator,
+        });
       } else {
         connect();
       }
@@ -329,6 +347,7 @@ export function useChat(): UseChatResult {
   return {
     username,
     room,
+    roomCreatedBy,
     joined,
     messages,
     users,

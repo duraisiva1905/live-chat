@@ -26,7 +26,7 @@ export function MessageList({ messages, currentUsername }: MessageListProps) {
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="min-h-0 flex-1 overflow-y-auto"
+      className="sleek-scroll min-h-0 flex-1 overflow-y-auto"
     >
       <div
         className="flex flex-col gap-1 px-3 py-4 md:px-5"

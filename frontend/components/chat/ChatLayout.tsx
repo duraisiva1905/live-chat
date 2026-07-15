@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 interface ChatLayoutProps {
   username: string;
   room: string;
+  roomCreatedBy: string;
   messages: ChatMessage[];
   users: UserOut[];
   rooms: RoomSummary[];
@@ -36,6 +37,7 @@ interface ChatLayoutProps {
 export function ChatLayout({
   username,
   room,
+  roomCreatedBy,
   messages,
   users,
   rooms,
@@ -85,6 +87,7 @@ export function ChatLayout({
         <ChatHeader
           room={room}
           username={username}
+          createdBy={roomCreatedBy}
           status={status}
           onLeave={onLeave}
           onOpenRooms={() => setRoomsOpen(true)}

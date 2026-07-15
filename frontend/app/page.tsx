@@ -12,6 +12,7 @@ export default function HomePage() {
   const {
     username,
     room,
+    roomCreatedBy,
     joined,
     messages,
     users,
@@ -49,18 +50,18 @@ export default function HomePage() {
   if (!joined) {
     return (
       <div className="flex min-h-dvh flex-col bg-[radial-gradient(ellipse_at_top,_oklch(0.28_0.04_250)_0%,_var(--background)_55%)]">
-        <header className="flex items-center justify-between border-b border-border/60 px-4 py-3 md:px-6">
+        <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/60 bg-background/80 px-4 py-3 backdrop-blur-md md:px-6">
           <p className="text-sm font-semibold tracking-tight">Live Chat</p>
           <ConnectionBadge status={status} />
         </header>
         <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 lg:flex-row lg:items-start lg:gap-10 lg:px-8">
-          <div className="h-72 w-full overflow-hidden rounded-2xl border border-border bg-sidebar/90 shadow-xl lg:h-[28rem] lg:w-72 lg:shrink-0">
+          <div className="flex h-72 w-full flex-col overflow-hidden rounded-2xl border border-border bg-sidebar/90 shadow-xl lg:h-[min(28rem,calc(100dvh-8rem))] lg:w-72 lg:shrink-0 lg:sticky lg:top-20">
             <RoomList
               rooms={rooms}
               loading={roomsLoading}
               selectedRoom={selectedRoom}
               onSelect={setSelectedRoom}
-              title="Active rooms"
+              title="Rooms"
             />
           </div>
           <div className="flex flex-1 justify-center lg:justify-start lg:pt-4">
@@ -87,6 +88,7 @@ export default function HomePage() {
     <ChatLayout
       username={username}
       room={room}
+      roomCreatedBy={roomCreatedBy}
       messages={messages}
       users={users}
       rooms={rooms}

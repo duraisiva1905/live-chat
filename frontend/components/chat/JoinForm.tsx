@@ -13,7 +13,7 @@ interface JoinFormProps {
   roomValue: string;
   onRoomChange: (room: string) => void;
   onJoin: (username: string, room: string) => void;
-  onCreateRoom: (room: string) => void;
+  onCreateRoom: (room: string, createdBy: string) => void;
   joining: boolean;
   creating: boolean;
   error: string | null;
@@ -39,6 +39,7 @@ export function JoinForm({
   const [mode, setMode] = useState<FormMode>("join");
   const [username, setUsername] = useState("");
   const [createRoomName, setCreateRoomName] = useState("");
+  const [creatorName, setCreatorName] = useState("");
 
   useEffect(() => {
     if (errorCode === "room_not_found" && roomValue.trim()) {
@@ -64,6 +65,7 @@ export function JoinForm({
     onClearError();
     onClearSuccess();
     setCreateRoomName(roomValue.trim());
+    setCreatorName(username.trim());
     setMode("create");
   };
 
@@ -81,27 +83,32 @@ export function JoinForm({
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const name = createRoomName.trim();
-    if (!name) {
+    const creator = creatorName.trim();
+    if (!name || !creator) {
       return;
     }
     onClearError();
     onClearSuccess();
-    onCreateRoom(name);
+    onCreateRoom(name, creator);
   };
 
   return (
-    <div className="w-full max-w-md space-y-6">
+    <div className="w-full max-w-md space-y-4">
       <div className="space-y-3 text-center lg:text-left">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary lg:mx-0">
-          <MessageSquare className="size-6" aria-hidden />
+        <div className="flex items-center justify-center gap-3 lg:justify-start">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+            <MessageSquare className="size-6" aria-hidden />
+          </div>
+
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            Live Chat
+          </h1>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Live Chat
-        </h1>
+
         <p className="text-sm text-muted-foreground">
           {mode === "join"
             ? "Pick an active room or enter a room name, then join with your display name."
-            : "Choose a unique room name to create a new chat room."}
+            : "Enter your name and a unique room name to create a new chat room."}
         </p>
       </div>
 
@@ -232,12 +239,29 @@ export function JoinForm({
           </Button>
 
           <div className="space-y-2">
+            <Label htmlFor="creator-name">Your name</Label>
+            <Input
+              id="creator-name"
+              name="creator-name"
+              autoComplete="nickname"
+              placeholder="e.g. alex"
+              value={creatorName}
+              onChange={(event) => {
+                onClearError();
+                setCreatorName(event.target.value);
+              }}
+              maxLength={50}
+              required
+              disabled={creating}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="create-room">Room name</Label>
             <Input
               id="create-room"
               name="create-room"
               autoComplete="off"
-              autoFocus
               placeholder="e.g. product-team"
               value={createRoomName}
               onChange={(event) => {
@@ -251,8 +275,8 @@ export function JoinForm({
               aria-invalid={Boolean(error && mode === "create")}
             />
             <p className="text-xs text-muted-foreground">
-              Room names are unique (case-insensitive). After creating, return
-              to join with your username.
+              Room names are unique (case-insensitive). After creating, join
+              with your username.
             </p>
           </div>
 
@@ -269,7 +293,7 @@ export function JoinForm({
             type="submit"
             className="w-full"
             size="lg"
-            disabled={creating || !createRoomName.trim()}
+            disabled={creating || !createRoomName.trim() || !creatorName.trim()}
           >
             {creating ? (
               <>

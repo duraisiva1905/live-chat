@@ -128,4 +128,77 @@
   html {
     @apply font-sans;
   }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    @apply cursor-pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    @apply cursor-not-allowed;
+  }
+}
+
+/* Thin, soft scrollbars used across chat panels.
+   Kept outside @layer so WebKit scrollbar pseudos always win over native OS chrome. */
+.sleek-scroll,
+.sleek-scroll-rooms {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(1 0 0 / 22%) transparent;
+  scroll-behavior: smooth;
+  scrollbar-gutter: auto;
+}
+
+.sleek-scroll::-webkit-scrollbar,
+.sleek-scroll-rooms::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sleek-scroll-rooms::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sleek-scroll::-webkit-scrollbar-track,
+.sleek-scroll-rooms::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 4px;
+}
+
+.sleek-scroll::-webkit-scrollbar-thumb,
+.sleek-scroll-rooms::-webkit-scrollbar-thumb {
+  background-color: oklch(1 0 0 / 16%);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.sleek-scroll:hover::-webkit-scrollbar-thumb,
+.sleek-scroll:focus-within::-webkit-scrollbar-thumb,
+.sleek-scroll-rooms:hover::-webkit-scrollbar-thumb,
+.sleek-scroll-rooms:focus-within::-webkit-scrollbar-thumb {
+  background-color: oklch(1 0 0 / 28%);
+}
+
+.sleek-scroll::-webkit-scrollbar-thumb:hover,
+.sleek-scroll-rooms::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(1 0 0 / 40%);
+}
+
+.sleek-scroll::-webkit-scrollbar-thumb:active,
+.sleek-scroll-rooms::-webkit-scrollbar-thumb:active {
+  background-color: oklch(0.68 0.14 250 / 55%);
+}
+
+.sleek-scroll::-webkit-scrollbar-corner,
+.sleek-scroll-rooms::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Remove classic OS up/down arrow buttons */
+.sleek-scroll::-webkit-scrollbar-button,
+.sleek-scroll-rooms::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }

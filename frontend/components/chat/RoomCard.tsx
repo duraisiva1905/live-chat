@@ -29,7 +29,7 @@ export function RoomCard({ room, selected = false, onSelect }: RoomCardProps) {
       type="button"
       onClick={() => onSelect(room.room_name)}
       className={cn(
-        "w-full rounded-xl border px-3 py-2.5 text-left shadow-sm transition-all",
+        "w-full cursor-pointer rounded-xl border px-3 py-2.5 text-left shadow-sm transition-all",
         "hover:border-primary/40 hover:bg-sidebar-accent",
         selected
           ? "border-primary/50 bg-sidebar-accent"
@@ -42,11 +42,14 @@ export function RoomCard({ room, selected = false, onSelect }: RoomCardProps) {
           #{room.room_name}
         </span>
         <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-400">
-          {room.active_users}
+          {room.active_users} online
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Created {formatCreatedAt(room.created_at)}
+      <p className="mt-1 truncate text-xs text-muted-foreground">
+        Created by {room.created_by || "unknown"}
+      </p>
+      <p className="truncate text-[11px] text-muted-foreground/80">
+        {formatCreatedAt(room.created_at)}
       </p>
     </button>
   );

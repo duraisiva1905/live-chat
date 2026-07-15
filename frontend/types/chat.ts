@@ -15,6 +15,7 @@ export interface RoomSummary {
   room_id: number;
   room_name: string;
   created_at: string;
+  created_by: string;
   active_users: number;
 }
 
@@ -31,6 +32,7 @@ export interface JoinRoomPayload {
 
 export interface CreateRoomPayload {
   room_name: string;
+  created_by: string;
 }
 
 export interface SendMessagePayload {
@@ -54,6 +56,7 @@ export interface TypingPayload {
 
 export interface MessageHistoryPayload {
   room: string;
+  created_by?: string;
   messages: ChatMessage[];
 }
 

@@ -3,7 +3,7 @@
 import { Users } from "lucide-react";
 
 import { UserAvatar } from "@/components/chat/UserAvatar";
-import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { UserOut } from "@/types/chat";
 import { cn } from "@/lib/utils";
 
@@ -26,14 +26,13 @@ export function OnlineUsers({
       )}
       aria-label="Online users"
     >
-      <div className="flex items-center gap-2 px-4 py-3">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b border-sidebar-border/80 bg-sidebar/95 px-4 py-3 backdrop-blur-md">
         <Users className="size-4 text-muted-foreground" aria-hidden />
         <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           Online — {users.length}
         </h2>
       </div>
-      <Separator />
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         {users.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">
             No users online
@@ -66,7 +65,7 @@ export function OnlineUsers({
             })}
           </ul>
         )}
-      </div>
+      </ScrollArea>
     </aside>
   );
 }
