@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { ArrowLeft, Loader2, MessageSquare, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,25 +41,23 @@ export function JoinForm({
   const [createRoomName, setCreateRoomName] = useState("");
   const [creatorName, setCreatorName] = useState("");
 
-  useEffect(() => {
+  // Adjust local UI when parent props change (prefer this over syncing in an effect).
+  const [prevErrorCode, setPrevErrorCode] = useState(errorCode);
+  if (errorCode !== prevErrorCode) {
+    setPrevErrorCode(errorCode);
     if (errorCode === "room_not_found" && roomValue.trim()) {
       setMode("create");
       setCreateRoomName(roomValue.trim());
     }
-  }, [errorCode, roomValue]);
+  }
 
-  useEffect(() => {
-    if (!successMessage) {
-      return;
+  const [prevSuccessMessage, setPrevSuccessMessage] = useState(successMessage);
+  if (successMessage !== prevSuccessMessage) {
+    setPrevSuccessMessage(successMessage);
+    if (successMessage) {
+      setMode("join");
     }
-    setMode("join");
-    const createdName = createRoomName.trim();
-    if (createdName) {
-      onRoomChange(createdName);
-    }
-    // Only react when a new success message arrives.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [successMessage]);
+  }
 
   const switchToCreate = () => {
     onClearError();
@@ -89,6 +87,11 @@ export function JoinForm({
     }
     onClearError();
     onClearSuccess();
+    // Prefill join form so success can show without a prop-sync effect.
+    onRoomChange(name);
+    if (!username.trim()) {
+      setUsername(creator);
+    }
     onCreateRoom(name, creator);
   };
 
