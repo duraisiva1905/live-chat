@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Hash, LogOut, Menu, Users } from "lucide-react";
 
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
+import { LeaveConfirmDialog } from "@/components/chat/LeaveConfirmDialog";
 import { Button } from "@/components/ui/button";
 import type { ConnectionStatus } from "@/types/chat";
 
@@ -23,58 +25,69 @@ export function ChatHeader({
   onOpenRooms,
   onOpenUsers,
 }: ChatHeaderProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   return (
-    <header className="flex items-center gap-2 border-b border-border bg-card/50 px-3 py-2.5 backdrop-blur md:px-5">
-      {onOpenRooms ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="lg:hidden"
-          aria-label="Open rooms"
-          onClick={onOpenRooms}
-        >
-          <Menu />
-        </Button>
-      ) : null}
+    <>
+      <header className="flex items-center gap-2 border-b border-border bg-card/50 px-3 py-2.5 backdrop-blur md:px-5">
+        {onOpenRooms ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="lg:hidden"
+            aria-label="Open rooms"
+            onClick={onOpenRooms}
+          >
+            <Menu />
+          </Button>
+        ) : null}
 
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <Hash className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-        <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold text-foreground">
-            {room}
-          </h1>
-          <p className="truncate text-xs text-muted-foreground">
-            Signed in as {username}
-          </p>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Hash className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold text-foreground">
+              {room}
+            </h1>
+            <p className="truncate text-xs text-muted-foreground">
+              Signed in as {username}
+            </p>
+          </div>
         </div>
-      </div>
 
-      <ConnectionBadge status={status} />
+        <ConnectionBadge status={status} />
 
-      {onOpenUsers ? (
+        {onOpenUsers ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="md:hidden"
+            aria-label="Open online users"
+            onClick={onOpenUsers}
+          >
+            <Users />
+          </Button>
+        ) : null}
+
         <Button
           type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="md:hidden"
-          aria-label="Open online users"
-          onClick={onOpenUsers}
+          variant="outline"
+          size="sm"
+          onClick={() => setConfirmOpen(true)}
+          aria-label="Leave room"
         >
-          <Users />
+          <LogOut />
+          <span className="hidden sm:inline">Leave</span>
         </Button>
-      ) : null}
+      </header>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onLeave}
-        aria-label="Leave room"
-      >
-        <LogOut />
-        <span className="hidden sm:inline">Leave</span>
-      </Button>
-    </header>
+      <LeaveConfirmDialog
+        open={confirmOpen}
+        room={room}
+        onOpenChange={setConfirmOpen}
+        onConfirm={onLeave}
+      />
+    </>
   );
 }
