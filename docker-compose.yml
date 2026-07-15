@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Swap this URL for Postgres in production, e.g.:
+      # DATABASE_URL=postgresql+asyncpg://user:password@db:5432/livechat
+      DATABASE_URL: sqlite+aiosqlite:///./data/chat.db
+      CORS_ORIGINS: "*"
+      MESSAGE_HISTORY_LIMIT: "100"
+    volumes:
+      - chat_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_SOCKET_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  chat_data:
