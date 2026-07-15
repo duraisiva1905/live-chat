@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 import { getSocket } from "@/lib/socket";
 import type { ConnectionStatus } from "@/types/chat";
@@ -16,18 +17,50 @@ interface UseSocketResult {
 export function useSocket(): UseSocketResult {
   const socketRef = useRef<Socket>(getSocket());
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const everConnected = useRef(false);
+  const statusRef = useRef<ConnectionStatus>("disconnected");
 
   useEffect(() => {
     const socket = socketRef.current;
 
-    const onConnect = () => setStatus("connected");
-    const onDisconnect = () => setStatus("disconnected");
-    const onReconnectAttempt = () => setStatus("reconnecting");
-    const onReconnect = () => setStatus("connected");
+    const onConnect = () => {
+      const wasReconnect = everConnected.current;
+      everConnected.current = true;
+      statusRef.current = "connected";
+      setStatus("connected");
+      if (wasReconnect) {
+        toast.success("Reconnected");
+      } else {
+        toast.success("Connected");
+      }
+    };
+
+    const onDisconnect = () => {
+      statusRef.current = "disconnected";
+      setStatus("disconnected");
+      toast.error("Connection lost");
+    };
+
+    const onReconnectAttempt = () => {
+      statusRef.current = "reconnecting";
+      setStatus("reconnecting");
+    };
+
+    const onReconnect = () => {
+      statusRef.current = "connected";
+      setStatus("connected");
+      toast.success("Reconnected");
+    };
+
     const onConnectError = () => {
-      setStatus((current) =>
-        current === "connected" ? "reconnecting" : "disconnected",
-      );
+      setStatus((current) => {
+        const next =
+          current === "connected" || current === "reconnecting"
+            ? "reconnecting"
+            : "disconnected";
+        statusRef.current = next;
+        return next;
+      });
     };
 
     socket.on("connect", onConnect);
@@ -37,7 +70,9 @@ export function useSocket(): UseSocketResult {
     socket.on("connect_error", onConnectError);
 
     if (socket.connected) {
+      statusRef.current = "connected";
       setStatus("connected");
+      everConnected.current = true;
     }
 
     return () => {
@@ -53,6 +88,7 @@ export function useSocket(): UseSocketResult {
     const socket = socketRef.current;
     if (!socket.connected) {
       setStatus("connecting");
+      statusRef.current = "connecting";
       socket.connect();
     }
   }, []);
@@ -63,6 +99,7 @@ export function useSocket(): UseSocketResult {
       socket.disconnect();
     }
     setStatus("disconnected");
+    statusRef.current = "disconnected";
   }, []);
 
   return {

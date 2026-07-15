@@ -1,19 +1,36 @@
-/** Shared chat domain types mirroring backend Socket.IO payloads. */
+/** Shared chat domain types mirroring backend Socket.IO / REST payloads. */
 
-export type MessageType = "user" | "system";
+export type MessageType = "chat" | "system";
 
 export interface ChatMessage {
-  id: number | null;
-  username: string;
-  content: string;
-  message_type: MessageType;
+  message_id: number | null;
+  sender: string;
+  text: string;
+  timestamp: string;
+  type: MessageType;
   room: string;
+}
+
+export interface RoomSummary {
+  room_id: number;
+  room_name: string;
   created_at: string;
+  active_users: number;
+}
+
+export interface UserOut {
+  username: string;
+  socket_id: string;
+  joined_at: string;
 }
 
 export interface JoinRoomPayload {
   username: string;
   room: string;
+}
+
+export interface CreateRoomPayload {
+  room_name: string;
 }
 
 export interface SendMessagePayload {
@@ -22,7 +39,7 @@ export interface SendMessagePayload {
 
 export interface RoomUsersPayload {
   room: string;
-  users: string[];
+  users: UserOut[];
 }
 
 export interface UserEventPayload {
@@ -30,9 +47,18 @@ export interface UserEventPayload {
   room: string;
 }
 
+export interface TypingPayload {
+  username: string;
+  room: string;
+}
+
 export interface MessageHistoryPayload {
   room: string;
   messages: ChatMessage[];
+}
+
+export interface RoomListPayload {
+  rooms: RoomSummary[];
 }
 
 export interface SocketErrorPayload {

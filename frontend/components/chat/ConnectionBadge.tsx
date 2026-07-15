@@ -5,17 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<ConnectionStatus, string> = {
-  connected: "Connected",
-  connecting: "Connecting",
-  reconnecting: "Reconnecting",
-  disconnected: "Disconnected",
+  connected: "🟢 Connected",
+  connecting: "🟡 Reconnecting",
+  reconnecting: "🟡 Reconnecting",
+  disconnected: "🔴 Disconnected",
 };
 
-interface ConnectionStatusProps {
+interface ConnectionBadgeProps {
   status: ConnectionStatus;
 }
 
-export function ConnectionStatusBadge({ status }: ConnectionStatusProps) {
+export function ConnectionBadge({ status }: ConnectionBadgeProps) {
   const isLive = status === "connected";
   const isPending = status === "connecting" || status === "reconnecting";
 
@@ -30,15 +30,6 @@ export function ConnectionStatusBadge({ status }: ConnectionStatusProps) {
       )}
       aria-live="polite"
     >
-      <span
-        className={cn(
-          "size-1.5 rounded-full",
-          isLive && "bg-emerald-400",
-          isPending && "animate-pulse bg-amber-300",
-          status === "disconnected" && "bg-destructive",
-        )}
-        aria-hidden
-      />
       {STATUS_LABEL[status]}
     </Badge>
   );

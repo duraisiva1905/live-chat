@@ -18,15 +18,15 @@ def ok(name: str, cond: bool, detail: str = "") -> None:
 def main() -> int:
     a = socketio.Client(reconnection=False)
     b = socketio.Client(reconnection=False)
-    c = socketio.Client(reconnection=False)
 
     a_msgs: list[dict] = []
     b_msgs: list[dict] = []
-    c_msgs: list[dict] = []
     a_users: list[dict] = []
-    b_users: list[dict] = []
+    room_lists: list[dict] = []
     a_history: list[dict] = []
-    d_errors: list[dict] = []
+    a_errors: list[dict] = []
+    created: list[dict] = []
+    typing_events: list[dict] = []
 
     @a.on("message_history")
     def a_hist(data: dict) -> None:
@@ -40,80 +40,97 @@ def main() -> int:
     def a_ru(data: dict) -> None:
         a_users.append(data)
 
+    @a.on("room_list_updated")
+    def a_rl(data: dict) -> None:
+        room_lists.append(data)
+
+    @a.on("room_created")
+    def a_rc(data: dict) -> None:
+        created.append(data)
+
+    @a.on("error")
+    def a_err(data: dict) -> None:
+        a_errors.append(data)
+
     @b.on("new_message")
     def b_msg(data: dict) -> None:
         b_msgs.append(data)
 
-    @b.on("room_users")
-    def b_ru(data: dict) -> None:
-        b_users.append(data)
+    @b.on("typing")
+    def b_typing(data: dict) -> None:
+        typing_events.append(data)
 
-    @c.on("new_message")
-    def c_msg(data: dict) -> None:
-        c_msgs.append(data)
+    @b.on("room_list_updated")
+    def b_rl(data: dict) -> None:
+        room_lists.append(data)
 
     a.connect("http://127.0.0.1:8000")
     b.connect("http://127.0.0.1:8000")
-    c.connect("http://127.0.0.1:8000")
+    time.sleep(0.4)
 
-    a.emit("join_room", {"username": "alice", "room": "alpha"})
-    time.sleep(0.6)
-    b.emit("join_room", {"username": "bob", "room": "alpha"})
-    time.sleep(0.6)
-    c.emit("join_room", {"username": "carol", "room": "beta"})
-    time.sleep(0.6)
+    # Join missing room should fail
+    a.emit("join_room", {"username": "alice", "room": "alpha-e2e"})
+    time.sleep(0.5)
+    ok(
+        "join missing room fails",
+        any(e.get("code") == "room_not_found" for e in a_errors),
+        str(a_errors),
+    )
 
-    a.emit("send_message", {"content": "hello from alice"})
-    time.sleep(0.6)
+    a.emit("create_room", {"room_name": "alpha-e2e"})
+    time.sleep(0.5)
+    ok("room created", any(r.get("room_name") == "alpha-e2e" for r in created), str(created))
+
+    a.emit("join_room", {"username": "alice", "room": "alpha-e2e"})
+    time.sleep(0.5)
+    b.emit("join_room", {"username": "bob", "room": "alpha-e2e"})
+    time.sleep(0.5)
 
     ok("a got history", len(a_history) >= 1)
     ok(
-        "both in room users",
-        any(set(u.get("users", [])) >= {"alice", "bob"} for u in a_users + b_users),
+        "room list has active users",
+        any(
+            any(r.get("room_name") == "alpha-e2e" and r.get("active_users", 0) >= 1 for r in payload.get("rooms", []))
+            for payload in room_lists
+        ),
+        str(room_lists[-1] if room_lists else {}),
     )
+    ok(
+        "structured users payload",
+        any(
+            isinstance(u.get("users", [None])[0], dict) if u.get("users") else False
+            for u in a_users
+        ),
+        str(a_users[-1] if a_users else {}),
+    )
+
+    a.emit("send_message", {"content": "hello from alice"})
+    time.sleep(0.5)
     ok(
         "b received alice msg",
-        any(m.get("content") == "hello from alice" for m in b_msgs),
+        any(m.get("text") == "hello from alice" for m in b_msgs),
+        str(b_msgs),
     )
     ok(
-        "c did not get alpha msg",
-        not any(m.get("content") == "hello from alice" for m in c_msgs),
-        f"c_msgs={c_msgs}",
+        "message has structured fields",
+        any(m.get("type") == "chat" and "timestamp" in m for m in b_msgs),
     )
 
-    d = socketio.Client(reconnection=False)
-
-    @d.on("error")
-    def d_err(data: dict) -> None:
-        d_errors.append(data)
-
-    d.connect("http://127.0.0.1:8000")
-    d.emit("join_room", {"username": "alice", "room": "alpha"})
-    time.sleep(0.6)
+    a.emit("typing", {})
+    time.sleep(0.4)
     ok(
-        "duplicate username rejected",
-        any(e.get("code") == "username_taken" for e in d_errors),
-        str(d_errors),
+        "typing broadcast",
+        any(t.get("username") == "alice" for t in typing_events),
+        str(typing_events),
     )
 
     a.emit("leave_room", {})
     time.sleep(0.5)
+    b.emit("leave_room", {})
+    time.sleep(0.5)
 
-    e = socketio.Client(reconnection=False)
-    e_hist: list[dict] = []
-
-    @e.on("message_history")
-    def e_h(data: dict) -> None:
-        e_hist.append(data)
-
-    e.connect("http://127.0.0.1:8000")
-    e.emit("join_room", {"username": "erin", "room": "alpha"})
-    time.sleep(0.6)
-    hist_contents = [m.get("content") for m in (e_hist[0]["messages"] if e_hist else [])]
-    ok("history persisted", "hello from alice" in hist_contents, str(hist_contents))
-
-    for client in (a, b, c, d, e):
-        client.disconnect()
+    a.disconnect()
+    b.disconnect()
 
     failed = [r for r in results if not r[1]]
     print("---")

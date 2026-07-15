@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import logging
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
-
-from app.config import settings
-from app.database import engine, init_db
-from app.schemas import HealthOut
-from app.socket_manager import sio
+from contextlib import asynccontextmanager
 
 import socketio
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.database import engine, get_session, init_db
+from app.room_manager import room_manager
+from app.schemas import HealthOut, RoomSummaryOut, UserOut
+from app.socket_manager import sio
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,8 +63,23 @@ async def health() -> HealthOut:
     return HealthOut(status=status, database=db_status)
 
 
-# Socket.IO wraps FastAPI so both HTTP and WebSocket share one ASGI app.
-socket_app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
+@fastapi_app.get("/rooms", response_model=list[RoomSummaryOut])
+async def list_rooms(
+    session: AsyncSession = Depends(get_session),
+) -> list[RoomSummaryOut]:
+    return await room_manager.list_active_rooms(session)
 
-# Alias used by uvicorn: `uvicorn app.main:app`
+
+@fastapi_app.get("/rooms/{room_name}/users", response_model=list[UserOut])
+async def list_room_users(
+    room_name: str,
+    session: AsyncSession = Depends(get_session),
+) -> list[UserOut]:
+    room = await room_manager.ensure_room_exists(session, room_name)
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return await room_manager.get_room_users(session, room_name)
+
+
+socket_app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
 app = socket_app

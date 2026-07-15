@@ -23,10 +23,8 @@ def _ensure_sqlite_directory(database_url: str) -> None:
         return
 
     parsed = urlparse(database_url)
-    # sqlite+aiosqlite:///./data/chat.db -> path is /./data/chat.db
     raw_path = parsed.path
     if database_url.startswith("sqlite+aiosqlite:////"):
-        # Absolute path form: sqlite+aiosqlite:////absolute/path.db
         db_path = Path("/" + raw_path.lstrip("/"))
     else:
         db_path = Path(raw_path.lstrip("/"))
@@ -63,14 +61,42 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+async def _ensure_name_normalized_column(conn) -> None:
+    """Add name_normalized when upgrading an existing SQLite schema."""
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        return
+
+    result = await conn.execute(text("PRAGMA table_info(rooms)"))
+    columns = {row[1] for row in result.fetchall()}
+    if not columns or "name_normalized" in columns:
+        return
+
+    await conn.execute(
+        text(
+            "ALTER TABLE rooms ADD COLUMN name_normalized VARCHAR(100)"
+        )
+    )
+    await conn.execute(
+        text(
+            "UPDATE rooms SET name_normalized = lower(name) "
+            "WHERE name_normalized IS NULL"
+        )
+    )
+    await conn.execute(
+        text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_rooms_name_normalized "
+            "ON rooms (name_normalized)"
+        )
+    )
+
+
 async def init_db() -> None:
     """Create all tables if they do not exist and clear stale sessions."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # No-op connectivity check kept portable across dialects.
+        await _ensure_name_normalized_column(conn)
         await conn.execute(text("SELECT 1"))
 
-    # Socket sessions do not survive process restarts.
     async with async_session_factory() as session:
         await session.execute(delete(UserSession))
         await session.commit()

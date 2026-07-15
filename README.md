@@ -2,7 +2,7 @@
 
 Production-style real-time chat with Next.js, FastAPI, Socket.IO, and SQLAlchemy.
 
-Users join a named room, chat live, see online members, and receive join/leave system messages. Messages persist in a database so history is restored on rejoin.
+Create rooms, browse active rooms live, join with a username, chat with typing indicators, and see online members. Messages persist so history is restored on rejoin.
 
 ## Stack
 
@@ -14,15 +14,16 @@ Users join a named room, chat live, see online members, and receive join/leave s
 
 ## Features
 
-- Join by username + room name (rooms auto-create)
+- Explicit create room + join existing room (case-insensitive unique names)
+- Live available-rooms list (name, online count, created time)
 - Real-time messaging with Socket.IO
-- Online users sidebar
+- Online users with initials avatars
+- Typing indicators
 - System join/leave messages
-- Message timestamps and auto-scroll
-- Persisted message history
-- Connection / loading / empty / error states
-- Responsive, accessible Slack/Discord-style UI
-- `GET /health` endpoint
+- HH:mm timestamps and smart auto-scroll
+- Connection badge + toast notifications
+- Responsive 3-column Slack/Discord-style UI
+- REST: `GET /health`, `GET /rooms`, `GET /rooms/{room}/users`
 
 ## Project structure
 
@@ -37,7 +38,7 @@ live-chat/
 │   │   ├── schemas.py
 │   │   ├── room_manager.py
 │   │   └── socket_manager.py
-│   ├── data/                 # SQLite file (gitignored)
+│   ├── data/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── .env.example
@@ -88,7 +89,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), enter a username and room, then chat. Use two browser windows to verify multi-user messaging.
+Open [http://localhost:3000](http://localhost:3000). Create or select a room, enter a username, then chat. Use two browser windows to verify multi-user messaging.
 
 ## Docker Compose
 
@@ -123,13 +124,19 @@ Install the Postgres driver when switching engines:
 pip install asyncpg
 ```
 
-No application code changes are required — only the URL (and driver).
-
 ### Frontend
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NEXT_PUBLIC_SOCKET_URL` | `http://localhost:8000` | Backend Socket.IO / API base URL |
+
+## REST API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness + database status |
+| `GET` | `/rooms` | Active rooms (`room_id`, `room_name`, `created_at`, `active_users`) |
+| `GET` | `/rooms/{room}/users` | Online users in a room |
 
 ## Socket.IO events
 
@@ -137,41 +144,46 @@ No application code changes are required — only the URL (and driver).
 
 | Event | Payload |
 |-------|---------|
+| `create_room` | `{ "room_name": string }` |
 | `join_room` | `{ "username": string, "room": string }` |
 | `send_message` | `{ "content": string }` |
 | `leave_room` | `{}` |
+| `typing` | `{}` |
+| `stop_typing` | `{}` |
 
 ### Server → Client
 
 | Event | Payload |
 |-------|---------|
+| `room_created` | `RoomSummary` |
+| `room_list_updated` | `{ "rooms": RoomSummary[] }` |
 | `message_history` | `{ "room": string, "messages": Message[] }` |
 | `new_message` | `Message` |
-| `room_users` | `{ "room": string, "users": string[] }` |
-| `user_joined` | `{ "username": string, "room": string }` |
-| `user_left` | `{ "username": string, "room": string }` |
+| `room_users` | `{ "room": string, "users": User[] }` |
+| `user_joined` / `user_left` | `{ "username": string, "room": string }` |
+| `typing` / `stop_typing` | `{ "username": string, "room": string }` |
 | `error` | `{ "message": string, "code"?: string }` |
 
 `Message` shape:
 
 ```json
 {
-  "id": 1,
-  "username": "alex",
-  "content": "Hello",
-  "message_type": "user",
+  "message_id": 1,
+  "sender": "alex",
+  "text": "Hello",
+  "type": "chat",
   "room": "general",
-  "created_at": "2026-07-15T12:00:00+00:00"
+  "timestamp": "2026-07-15T12:00:00+00:00"
 }
 ```
 
 ## Database schema
 
-- **rooms** — `id`, `name` (unique), `created_at`
+- **rooms** — `id`, `name`, `name_normalized` (unique, case-insensitive), `created_at`
 - **messages** — `id`, `room_id`, `username`, `content`, `message_type`, `created_at`
 - **sessions** — active Socket.IO presence (`sid`, `username`, `room_id`, `joined_at`)
 
-Tables are created automatically on startup (`create_all`). For production Postgres, consider Alembic migrations later.
+Active rooms are those with at least one online session. Empty rooms remain in the DB for history and uniqueness but are hidden from the live list.
 
 ## Smoke test (optional)
 

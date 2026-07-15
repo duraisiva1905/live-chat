@@ -6,17 +6,19 @@ import { SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface MessageInputProps {
+interface ChatInputProps {
   onSend: (content: string) => void;
+  onTyping?: () => void;
   disabled?: boolean;
   placeholder?: string;
 }
 
-export function MessageInput({
+export function ChatInput({
   onSend,
+  onTyping,
   disabled = false,
   placeholder = "Message the room…",
-}: MessageInputProps) {
+}: ChatInputProps) {
   const [value, setValue] = useState("");
 
   const submit = () => {
@@ -45,10 +47,13 @@ export function MessageInput({
       onSubmit={handleSubmit}
       className="border-t border-border bg-card/40 px-3 py-3 md:px-5"
     >
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-background/80 px-2 py-1.5 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/40">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-background/80 px-2 py-1.5 shadow-sm focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/40">
         <Input
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+            onTyping?.();
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
