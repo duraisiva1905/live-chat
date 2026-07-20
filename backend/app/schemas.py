@@ -53,6 +53,14 @@ class UserOut(BaseModel):
     joined_at: datetime
 
 
+class UsersIn(BaseModel):
+    users: list[UserOut]
+
+
+class MessagesIn(BaseModel):
+    messages: list[MessageOut]
+
+
 class MessageOut(BaseModel):
     """Wire format aligned with the structured Message contract."""
 

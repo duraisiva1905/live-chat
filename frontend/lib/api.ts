@@ -1,4 +1,4 @@
-import type { RoomSummary, UserOut } from "@/types/chat";
+import type { RoomSummary, UserOut, UsersIn, ChatMessage } from "@/types/chat";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:8000";
@@ -27,3 +27,37 @@ export async function fetchRoomUsers(roomName: string): Promise<UserOut[]> {
   }
   return response.json() as Promise<UserOut[]>;
 }
+
+export async function fetchUsers(): Promise<UserOut[]> {
+  const response = await fetch(
+    `${API_BASE}/users`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new Error("Failed to load room users");
+  }
+  return response.json() as Promise<UserOut[]>;
+}
+
+export async function fetchMessagesCount(count: number, roomName: string): Promise<ChatMessage[]> 
+{
+  const response = await fetch(
+    `${API_BASE}/messages/${encodeURIComponent(roomName)}/${count}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new Error("Failed to load room users");
+  }
+  return response.json() as Promise<ChatMessage[]>;
+
+}
+
+// export async function fetchUsers(): Promise<UsersIn[]> {
+//   const response = await fetch(`${API_BASE}/users`, {
+//     cache: "no-store",
+//   });
+//   if (!response.ok) {
+//     throw new Error("Failed to load users");
+//   }
+//   return response.json() as Promise<UsersIn[]>;
+// }

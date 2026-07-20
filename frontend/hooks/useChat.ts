@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { fetchRooms } from "@/lib/api";
+import { fetchMessagesCount, fetchRooms, fetchUsers } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 import type {
   ChatMessage,
@@ -25,6 +25,7 @@ interface UseChatResult {
   joined: boolean;
   messages: ChatMessage[];
   users: UserOut[];
+  lobbyUsers: UserOut[];
   rooms: RoomSummary[];
   roomsLoading: boolean;
   typingUsers: string[];
@@ -34,6 +35,7 @@ interface UseChatResult {
   error: string | null;
   errorCode: string | null;
   successMessage: string | null;
+  messagesCount: ChatMessage[];
   clearError: () => void;
   clearSuccess: () => void;
   connectLobby: () => void;
@@ -72,6 +74,8 @@ export function useChat(): UseChatResult {
   const pendingCreate = useRef<{ room_name: string; created_by: string } | null>(
     null,
   );
+  const [lobbyUsers, setLobbyUsers] = useState<UserOut[]>([]);
+  const [messagesCount, setMessagesCount] = useState<ChatMessage[]>([]);
   const seenKeys = useRef<Set<string>>(new Set());
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTyping = useRef(false);
@@ -122,10 +126,31 @@ export function useChat(): UseChatResult {
     }
   }, []);
 
+  const hydrateMessages = useCallback(async () => {
+    try {
+      const data = await fetchMessagesCount(10, room);
+      setMessagesCount(data);
+      console.log("Messages from latest:::::", data);
+    } catch {
+      // REST may fail; landing list stays empty until next refresh.
+    }
+  }, [room]);
+
+  const hydrateUsers = useCallback(async () => {
+    try {
+      const data = await fetchUsers();
+      setLobbyUsers(data);
+    } catch {
+      // REST may fail; landing list stays empty until next refresh.
+    }
+  }, []);
+
   const connectLobby = useCallback(() => {
     void hydrateRooms();
+    void hydrateUsers();
+    void hydrateMessages();
     connect();
-  }, [connect, hydrateRooms]);
+  }, [connect, hydrateRooms, hydrateUsers, hydrateMessages]);
 
   useEffect(() => {
     const onHistory = (payload: MessageHistoryPayload) => {
@@ -360,6 +385,8 @@ export function useChat(): UseChatResult {
     error,
     errorCode,
     successMessage,
+    lobbyUsers,
+    messagesCount,
     clearError,
     clearSuccess,
     connectLobby,

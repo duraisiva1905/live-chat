@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import engine, get_session, init_db
 from app.room_manager import room_manager
-from app.schemas import HealthOut, RoomSummaryOut, UserOut
+from app.schemas import HealthOut, RoomSummaryOut, UserOut, UsersIn, MessageOut
 from app.socket_manager import sio
 
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    logger.info("Initializing database (%s)", settings.DATABASE_URL.split("://")[0])
+    logger.info("Initializing database (%s)",
+                settings.DATABASE_URL.split("://")[0])
     await init_db()
     logger.info("Database ready")
     yield
@@ -80,6 +81,24 @@ async def list_room_users(
         raise HTTPException(status_code=404, detail="Room not found")
     return await room_manager.get_room_users(session, room_name)
 
+
+@fastapi_app.get("/users", response_model=list[UserOut])
+async def list_users(
+    session: AsyncSession = Depends(get_session),
+) -> list[UserOut]:
+    return await room_manager.get_all_users(session)
+
+
+@fastapi_app.get("/messages/{room_name}/{count}", response_model=list[MessageOut])
+async def list_messages(
+    room_name: str,
+    count: int,
+    session: AsyncSession = Depends(get_session),
+) -> list[MessageOut]:
+    print("Listing all messages")
+    messages = await room_manager.get_all_messages(session, count, room_name)
+    print(f"Messages: {messages}")
+    return messages
 
 socket_app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
 app = socket_app

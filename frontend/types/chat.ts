@@ -74,3 +74,7 @@ export type ConnectionStatus =
   | "connecting"
   | "connected"
   | "reconnecting";
+
+  export interface UsersIn {
+    users:UserOut[]
+  }

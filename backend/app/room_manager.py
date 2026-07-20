@@ -60,7 +60,8 @@ class RoomManager:
         if not cleaned:
             raise RoomError("Room name is required", code="validation_error")
         if not creator:
-            raise RoomError("Creator username is required", code="validation_error")
+            raise RoomError("Creator username is required",
+                            code="validation_error")
 
         normalized = self.normalize_room_key(cleaned)
         existing = await session.scalar(
@@ -267,6 +268,19 @@ class RoomManager:
     ) -> UserSession | None:
         return await session.get(UserSession, sid)
 
+    async def get_all_users(self, session: AsyncSession) -> list[UserOut]:
+        result = await session.scalars(
+            select(UserSession).order_by(UserSession.joined_at.asc())
+        )
+        return [
+            UserOut(
+                username=user.username,
+                socket_id=user.sid,
+                joined_at=user.joined_at,
+            )
+            for user in result.all()
+        ]
+
     async def get_recent_messages(
         self,
         session: AsyncSession,
@@ -290,6 +304,16 @@ class RoomManager:
     async def ensure_room_exists(self, session: AsyncSession, room_name: str) -> Room | None:
         return await self._get_room_by_name(session, room_name)
 
+    async def get_all_messages(self, session: AsyncSession, count: int, room_name: str) -> list[MessageOut]:
+        # room = await self._get_room_by_name(session, room_name)
+        # if room is None:
+        #     return []
+        result = await session.scalars(
+            select(Message).order_by(
+                Message.created_at.desc()).limit(count)
+        )
+        return [self._to_message_out(msg, room_name) for msg in result.all()]
+
     async def _get_room_by_name(self, session: AsyncSession, room_name: str) -> Room | None:
         normalized = self.normalize_room_key(room_name)
         return await session.scalar(
@@ -307,7 +331,7 @@ class RoomManager:
         )
 
     @staticmethod
-    def _to_message_out(message: Message, room_name: str) -> MessageOut:
+    def _to_message_out(message: Message, room_name: str | None = None) -> MessageOut:
         raw_type = message.message_type
         msg_type: Literal["chat", "system"] = (
             "system" if raw_type == "system" else "chat"

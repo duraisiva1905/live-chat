@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ChatLayout } from "@/components/chat/ChatLayout";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { JoinForm } from "@/components/chat/JoinForm";
+import { OnlineUsers } from "@/components/chat/OnlineUsers";
 import { RoomList } from "@/components/chat/RoomList";
 import { useChat } from "@/hooks/useChat";
 
@@ -16,6 +17,7 @@ export default function HomePage() {
     joined,
     messages,
     users,
+    lobbyUsers,
     rooms,
     roomsLoading,
     typingUsers,
@@ -79,6 +81,11 @@ export default function HomePage() {
               onClearSuccess={clearSuccess}
             />
           </div>
+          <OnlineUsers
+            users={lobbyUsers}
+            currentUsername={username}
+            className="hidden lg:block"
+          />
         </div>
       </div>
     );
